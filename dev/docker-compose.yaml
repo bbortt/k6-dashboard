@@ -1,0 +1,38 @@
+# Gets a local development environment up and running.
+
+version: '3.8'
+name: 'k6-dashboard'
+services:
+  timescaledb:
+    image: timescale/timescaledb:latest-pg16
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_PASSWORD=KrPPCHdYSXz6wMct5tUK  # TODO: Replace this when using in production
+      - POSTGRES_USER=k6_dashboard
+      - POSTGRES_DB=k6_dashboard
+    volumes:
+      - ./timescaledb/data:/var/lib/postgresql/data  # Persists database data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U k6_dashboard -d k6_dashboard"]
+      interval: 5s
+      timeout: 2s
+      retries: 6
+
+  k6:
+    image: golang:alpine3.19
+    environment:
+      TIMESCALEDB_JDBC_URL: postgresql://k6_dashboard:KrPPCHdYSXz6wMct5tUK@timescaledb:5432/k6_dashboard
+    volumes:
+      - ../src/test/k6:/scripts
+      - ./k6/entrypoint.sh:/usr/local/bin/entrypoint.sh
+      # You can use caches if you want, but this may slow down your Docker daemon.
+      # - ./k6/go/modules:/go/pkg/mod
+      # - ./k6/go/build:/root/.cache/go-build
+    entrypoint: [ "/usr/local/bin/entrypoint.sh" ]
+    depends_on:
+      timescaledb:
+        condition: service_healthy
+
+volumes:
+  timescaledb_data:

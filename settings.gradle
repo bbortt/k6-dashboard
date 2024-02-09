@@ -1,0 +1,15 @@
+pluginManagement {
+    repositories {
+        gradlePluginPortal()
+        maven { url "https://repo.spring.io/release" }
+    }
+    plugins {
+        id "io.freefair.lombok" version "${lombokPluginVersion}"
+        id "io.spring.dependency-management" version "${springDependenciesVersion}"
+        id "org.flywaydb.flyway" version "${flywayVersion}"
+        id "org.springframework.boot" version "${springBootVersion}"
+        id "org.openapi.generator" version "${openapiPluginVersion}"
+    }
+}
+
+rootProject.name = "${rootProject.name}"
