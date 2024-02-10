@@ -1,5 +1,6 @@
 package io.github.bbortt.k6.dashboard.domain;
 
+import io.hypersistence.utils.hibernate.type.json.JsonType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
@@ -10,23 +11,22 @@ import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.Type;
 
 import java.time.Instant;
 import java.util.Map;
 
-import static jakarta.persistence.GenerationType.IDENTITY;
-
+@Data
 @Entity
 @Table(name = "thresholds")
-@Data
 @NoArgsConstructor
 @AllArgsConstructor
 public class Threshold {
 
     @Id
     @Column(name = "id")
-    @SequenceGenerator(name = "sequenceGenerator")
-    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "sequenceGenerator")
+    @SequenceGenerator(name = "thresholds_id_seq", allocationSize = 1)
+    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "thresholds_id_seq")
     private Long id;
 
     @Column(name = "ts", nullable = false, columnDefinition = "TIMESTAMP WITH TIME ZONE")
@@ -35,8 +35,7 @@ public class Threshold {
     @Column(name = "metric", nullable = false, length = 128)
     private String metric;
 
-    // TODO: @Type(type = "jsonb")
-    //  https://github.com/vladmihalcea/hypersistence-utils
+    @Type(JsonType.class)
     @Column(name = "tags", columnDefinition = "jsonb")
     private Map<String, Object> tags; // Using a Map to represent the JSON structure
 
