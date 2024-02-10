@@ -3,7 +3,9 @@ package io.github.bbortt.k6.dashboard.web;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.github.bbortt.k6.dashboard.domain.Sample;
+import io.github.bbortt.k6.dashboard.domain.Threshold;
 import io.github.bbortt.k6.dashboard.service.SampleService;
+import io.github.bbortt.k6.dashboard.service.ThresholdService;
 import io.github.bbortt.k6.dashboard.web.api.K6DashboardApiDelegate;
 import io.github.bbortt.k6.dashboard.web.dto.MetricPoint;
 import lombok.extern.slf4j.Slf4j;
@@ -18,6 +20,8 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.function.Supplier;
 
+import static io.github.bbortt.k6.dashboard.web.dto.MetricPoint.MetricPointType.Metric;
+import static io.github.bbortt.k6.dashboard.web.dto.MetricPoint.MetricPointType.Point;
 import static java.util.concurrent.CompletableFuture.allOf;
 import static java.util.concurrent.CompletableFuture.supplyAsync;
 import static java.util.concurrent.Executors.newVirtualThreadPerTaskExecutor;
@@ -30,14 +34,33 @@ public class K6Dashboard implements K6DashboardApiDelegate {
 
     private final ObjectMapper objectMapper;
     private final SampleService sampleService;
+    private final ThresholdService thresholdService;
 
-    public K6Dashboard(ObjectMapper objectMapper, SampleService sampleService) {
+    public K6Dashboard(ObjectMapper objectMapper, SampleService sampleService, ThresholdService thresholdService) {
         this.objectMapper = objectMapper;
         this.sampleService = sampleService;
+        this.thresholdService = thresholdService;
     }
 
     private static Sample toSample(MetricPoint metricPoint) {
-        return null;
+        return Sample.builder()
+                .ts(metricPoint.getData().getTime())
+                .metric(metricPoint.getMetric())
+                .tags(metricPoint.getData().getTags())
+                .value(metricPoint.getData().getValue().floatValue())
+                .build();
+    }
+
+    private static Threshold toThreshold(MetricPoint metricPoint) {
+        return Threshold.builder()
+                .ts(metricPoint.getData().getTime())
+                .metric(metricPoint.getMetric())
+                .tags(metricPoint.getData().getTags())
+                // TODO: .threshold(metricPoint.getData().getThresholds())
+                //  .abortOnFail()
+                //  .delayAbortEval()
+                .lastFailed(metricPoint.getData().getTainted())
+                .build();
     }
 
     public ResponseEntity<Void> apiRestV1K6ReportsPost(MultipartFile reportFile) {
@@ -45,20 +68,31 @@ public class K6Dashboard implements K6DashboardApiDelegate {
              var reader = new BufferedReader(new InputStreamReader(inputStream));
              var executorService = newVirtualThreadPerTaskExecutor()) {
 
-
-            var futures = reader.lines()
-                    .map(this::readSampleLine)
+            var metricPointFutures = reader.lines()
+                    .map(this::readMetricPointFromLine)
                     .map(task -> supplyAsync(task, executorService))
                     .toList();
 
-            var samples = allOf(futures.toArray(CompletableFuture[]::new))
+            var metricPoints = allOf(metricPointFutures.toArray(CompletableFuture[]::new))
                     .thenApply(
-                            ignored -> futures.stream()
+                            ignored -> metricPointFutures.stream()
                                     .map(CompletableFuture::join)
                                     .toList()
                     ).get();
 
-            sampleService.saveAll(samples);
+            sampleService.saveAll(
+                    metricPoints.stream()
+                            .filter(metricPoint -> Point.equals(metricPoint.getType()))
+                            .map(K6Dashboard::toSample)
+                            .toList()
+            );
+
+            thresholdService.saveAll(
+                    metricPoints.stream()
+                            .filter(metricPoint -> Metric.equals(metricPoint.getType()))
+                            .map(K6Dashboard::toThreshold)
+                            .toList()
+            );
 
             return new ResponseEntity<>(CREATED);
         } catch (IOException e) {
@@ -69,10 +103,10 @@ public class K6Dashboard implements K6DashboardApiDelegate {
         }
     }
 
-    private Supplier<Sample> readSampleLine(String line) {
+    private Supplier<MetricPoint> readMetricPointFromLine(String line) {
         return () -> {
             try {
-                return toSample(objectMapper.readValue(line, MetricPoint.class));
+                return objectMapper.readValue(line, MetricPoint.class);
             } catch (JsonProcessingException e) {
                 throw new RuntimeException(e);
             }

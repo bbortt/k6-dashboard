@@ -34,6 +34,7 @@ podman run -d --name k6 \
 ### Using the REST API
 
 The below command will create a JSON report which you can then upload to the running application using `curl`.
+Replace `docker` by `podman` when running on Linux.
 
 ```shell
 docker run --rm -i -v $PWD/src/test/k6:/app -w /app grafana/k6 run --out json=report.json script.js

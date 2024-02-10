@@ -22,14 +22,15 @@ public class MetricPoint {
         private String name;
         private String type;
         private String contains;
-        private List<Object> thresholds; // Adjust the type based on actual data
-        private Object submetrics; // Adjust the type based on actual data
+        private Boolean tainted;
+        private List<String> thresholds;
+        private Object submetrics; // TODO: Adjust the type based on actual data
         private Map<String, Object> tags;
         private Double value;
         private Instant time;
     }
 
-    private enum MetricPointType {
+    public enum MetricPointType {
         Metric,
         Point
     }
