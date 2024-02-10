@@ -1,5 +1,6 @@
 package io.github.bbortt.k6.dashboard.web;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.github.bbortt.k6.dashboard.domain.Sample;
 import io.github.bbortt.k6.dashboard.service.SampleService;
@@ -12,12 +13,16 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.util.ArrayList;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
+import java.util.function.Supplier;
 
+import static java.util.concurrent.CompletableFuture.allOf;
+import static java.util.concurrent.CompletableFuture.supplyAsync;
+import static java.util.concurrent.Executors.newVirtualThreadPerTaskExecutor;
+import static org.springframework.http.HttpStatus.BAD_REQUEST;
 import static org.springframework.http.HttpStatus.CREATED;
-import static org.springframework.http.HttpStatus.INTERNAL_SERVER_ERROR;
 
 @Slf4j
 @Component
@@ -31,28 +36,46 @@ public class K6Dashboard implements K6DashboardApiDelegate {
         this.sampleService = sampleService;
     }
 
+    private static Sample toSample(MetricPoint metricPoint) {
+        return null;
+    }
+
     public ResponseEntity<Void> apiRestV1K6ReportsPost(MultipartFile reportFile) {
-        var metricPoints = new ArrayList<Sample>();
+        try (var inputStream = reportFile.getInputStream();
+             var reader = new BufferedReader(new InputStreamReader(inputStream));
+             var executorService = newVirtualThreadPerTaskExecutor()) {
 
-        try (InputStream inputStream = reportFile.getInputStream();
-             BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream))) {
 
-            // TODO: Use virtual threads!
-            String line;
-            while ((line = reader.readLine()) != null) {
-                metricPoints.add(toSample(objectMapper.readValue(line, MetricPoint.class)));
-            }
+            var futures = reader.lines()
+                    .map(this::readSampleLine)
+                    .map(task -> supplyAsync(task, executorService))
+                    .toList();
 
-            sampleService.saveAll(metricPoints);
+            var samples = allOf(futures.toArray(CompletableFuture[]::new))
+                    .thenApply(
+                            ignored -> futures.stream()
+                                    .map(CompletableFuture::join)
+                                    .toList()
+                    ).get();
+
+            sampleService.saveAll(samples);
 
             return new ResponseEntity<>(CREATED);
         } catch (IOException e) {
             log.error("Failed to parse JSON report!", e);
-            return new ResponseEntity<>(INTERNAL_SERVER_ERROR);
+            return new ResponseEntity<>(BAD_REQUEST);
+        } catch (ExecutionException | InterruptedException e) {
+            throw new RuntimeException(e);
         }
     }
 
-    private Sample toSample(MetricPoint metricPoint) {
-        return null;
+    private Supplier<Sample> readSampleLine(String line) {
+        return () -> {
+            try {
+                return toSample(objectMapper.readValue(line, MetricPoint.class));
+            } catch (JsonProcessingException e) {
+                throw new RuntimeException(e);
+            }
+        };
     }
 }
