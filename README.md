@@ -12,19 +12,21 @@ export the resulting data into the database.
 The same is possible using `podman` (starting one pod after the other):
 
 ```shell
+mkdir -p dev/timescaledb/data
+
 podman run -d --name timescaledb \
   -e POSTGRES_PASSWORD=KrPPCHdYSXz6wMct5tUK \
   -e POSTGRES_USER=k6_dashboard \
   -e POSTGRES_DB=k6_dashboard \
-  -v $(pwd)/timescaledb/data:/var/lib/postgresql/data:Z \
+  -v $(pwd)/dev/timescaledb/data:/var/lib/postgresql/data \
   -p 5432:5432 \
   timescale/timescaledb:latest-pg16
 
 podman run -d --name k6 \
   --add-host=timescaledb:$(hostname -I | awk '{print $1}') \
   -e TIMESCALEDB_JDBC_URL=postgresql://k6_dashboard:KrPPCHdYSXz6wMct5tUK@timescaledb:5432/k6_dashboard \
-  -v $(pwd)/src/test/k6:/scripts:Z \
-  -v $(pwd)dev//k6/entrypoint.sh:/usr/local/bin/entrypoint.sh:Z \
+  -v $(pwd)/src/test/k6:/scripts \
+  -v $(pwd)/dev/k6/entrypoint.sh:/usr/local/bin/entrypoint.sh \
   --entrypoint /usr/local/bin/entrypoint.sh \
   golang:alpine3.19
 ```
