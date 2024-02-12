@@ -25,7 +25,7 @@ public class MetricPoint {
         private Boolean tainted;
         private List<String> thresholds;
         private Object submetrics; // TODO: Adjust the type based on actual data
-        private Map<String, Object> tags;
+        private Map<String, String> tags;
         private Double value;
         private Instant time;
     }

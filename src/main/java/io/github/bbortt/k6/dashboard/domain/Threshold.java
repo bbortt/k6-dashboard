@@ -39,7 +39,7 @@ public class Threshold {
 
     @Type(JsonType.class)
     @Column(name = "tags", columnDefinition = "jsonb")
-    private Map<String, Object> tags; // Using a Map to represent the JSON structure
+    private Map<String, String> tags; // Using a Map to represent the JSON structure
 
     @Column(name = "threshold", nullable = false, length = 128)
     private String threshold;

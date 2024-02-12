@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Arrays;
 import java.util.List;
 
 @Service
@@ -19,6 +20,11 @@ public class SampleService {
 
     @Modifying
     @Transactional
-    public void saveAll(List<Sample> metricPoints) {
+    public void saveAll(List<Sample> samples) {
+    }
+
+    @Transactional
+    public List<Sample> findAll() {
+   return sampleRepository.findAll();
     }
 }

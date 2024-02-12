@@ -10,7 +10,6 @@ import io.github.bbortt.k6.dashboard.service.api.dto.ApiRestV1K6SamplesGet200Res
 import io.github.bbortt.k6.dashboard.web.api.K6DashboardApiDelegate;
 import io.github.bbortt.k6.dashboard.web.dto.MetricPoint;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
 import org.springframework.web.multipart.MultipartFile;
@@ -18,7 +17,9 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.time.OffsetDateTime;
 import java.util.List;
+import java.util.TimeZone;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.function.Supplier;
@@ -30,6 +31,7 @@ import static java.util.concurrent.CompletableFuture.supplyAsync;
 import static java.util.concurrent.Executors.newVirtualThreadPerTaskExecutor;
 import static org.springframework.http.HttpStatus.BAD_REQUEST;
 import static org.springframework.http.HttpStatus.CREATED;
+import static org.springframework.http.ResponseEntity.ok;
 
 @Slf4j
 @Component
@@ -64,6 +66,16 @@ public class K6Dashboard implements K6DashboardApiDelegate {
                 //  .delayAbortEval()
                 .lastFailed(metricPoint.getData().getTainted())
                 .build();
+    }
+
+    private static ApiRestV1K6SamplesGet200ResponseInner toDto(Sample sample) {
+        return new ApiRestV1K6SamplesGet200ResponseInner(
+                sample.getId(),
+                OffsetDateTime.ofInstant(sample.getTs(), TimeZone.getDefault().toZoneId()),
+                sample.getMetric(),
+                sample.getTags(),
+                sample.getValue()
+        );
     }
 
     public ResponseEntity<Void> apiRestV1K6ReportsPost(MultipartFile reportFile) {
@@ -108,7 +120,12 @@ public class K6Dashboard implements K6DashboardApiDelegate {
 
     @Override
     public ResponseEntity<List<ApiRestV1K6SamplesGet200ResponseInner>> apiRestV1K6SamplesGet() {
-        return new ResponseEntity<>(HttpStatus.NOT_IMPLEMENTED);
+        return ok(
+                sampleService.findAll()
+                        .stream()
+                        .map(K6Dashboard::toDto)
+                        .toList()
+        );
     }
 
     private Supplier<MetricPoint> readMetricPointFromLine(String line) {

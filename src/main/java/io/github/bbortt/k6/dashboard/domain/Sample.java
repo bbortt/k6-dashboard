@@ -39,7 +39,7 @@ public class Sample {
 
     @Type(JsonType.class)
     @Column(name = "tags", columnDefinition = "jsonb")
-    private Map<String, Object> tags;
+    private Map<String, String> tags;
 
     @Column(name = "value")
     private Float value;

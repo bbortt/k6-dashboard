@@ -15,6 +15,6 @@ public class ThresholdService {
         this.thresholdRepository = thresholdRepository;
     }
 
-    public void saveAll(List<Threshold> list) {
+    public void saveAll(List<Threshold> thresholds) {
     }
 }

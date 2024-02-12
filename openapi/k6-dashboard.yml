@@ -41,6 +41,12 @@ paths:
                 type: array
                 items:
                   type: object
+                  required:
+                    - id
+                    - ts
+                    - metric
+                    - tags
+                    - value
                   properties:
                     id:
                       type: integer
