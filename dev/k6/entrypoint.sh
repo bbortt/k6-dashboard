@@ -12,4 +12,5 @@ test_id=$(head /dev/urandom | tr -dc A-Za-z0-9 | head -c 7)
 /go/k6 run \
   -o "timescaledb=$TIMESCALEDB_JDBC_URL" \
   --tag "testid=$test_id" \
+  --vus 10 --duration 30s \
   /scripts/script.js

@@ -2,7 +2,7 @@ create table samples
 (
     id     bigserial,
     ts     timestamp with time zone default CURRENT_TIMESTAMP not null,
-    metric varchar(128)                                       not null,
+    metric text                                               not null,
     tags   jsonb,
     value  real
 );
