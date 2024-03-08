@@ -3,13 +3,28 @@ pluginManagement {
         gradlePluginPortal()
         maven { url "https://repo.spring.io/release" }
     }
+
     plugins {
-        id "io.freefair.lombok" version "${lombokPluginVersion}"
-        id "io.spring.dependency-management" version "${springDependenciesVersion}"
-        id "org.flywaydb.flyway" version "${flywayVersion}"
-        id "org.springframework.boot" version "${springBootVersion}"
-        id "org.openapi.generator" version "${openapiPluginVersion}"
+        id "io.freefair.lombok" version "${lombokPluginVersion}" apply false
+        id "io.spring.dependency-management" version "${springDependenciesVersion}" apply false
+        id "org.flywaydb.flyway" version "${flywayVersion}" apply false
+        id "org.springframework.boot" version "${springBootVersion}" apply false
+        id "org.openapi.generator" version "${openapiPluginVersion}" apply false
+    }
+
+    buildscript {
+        repositories {
+            mavenCentral()
+        }
+
+        dependencies {
+            classpath "org.flywaydb:flyway-database-postgresql:${flywayVersion}"
+        }
     }
 }
 
 rootProject.name = "${rootProject.name}"
+
+
+include 'apps:k6-report-ingress'
+findProject(':apps:k6-report-ingress')?.name = 'k6-report-ingress'

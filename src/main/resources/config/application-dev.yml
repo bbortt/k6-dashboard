@@ -1,5 +1,0 @@
-spring:
-  datasource:
-    url: jdbc:postgresql://localhost:5432/k6_dashboard
-    username: k6_dashboard
-    password: KrPPCHdYSXz6wMct5tUK
