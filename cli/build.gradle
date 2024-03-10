@@ -1,0 +1,64 @@
+plugins {
+    id "base"
+    id "org.openapi.generator"
+}
+
+
+group = "io.github.bbortt.k6.dashboard"
+
+
+repositories {
+    mavenCentral()
+}
+
+
+dependencies {
+}
+
+
+task openApiGenerateClient(type: org.openapitools.generator.gradle.plugin.tasks.GenerateTask) {
+    generatorName = "rust"
+    inputSpec = "$rootDir/openapi/k6-report-ingress.yml".toString()
+    outputDir = "$projectDir/client".toString()
+    validateSpec = true
+}
+
+assemble.dependsOn "openApiGenerateClient"
+
+
+task cargoCheck(type: Exec) {
+    workingDir "$projectDir"
+    commandLine "cargo", "check"
+
+    // Optional: Set up environment variables if needed
+    // environment "VAR_NAME", "value"
+
+    standardOutput = new ByteArrayOutputStream()
+    ext.output = {
+        return standardOutput.toString()
+    }
+
+    doLast {
+        println "$output()"
+    }
+}
+
+task cargoBuild(type: Exec) {
+    workingDir "$projectDir"
+    commandLine "cargo", "build"
+
+    // Optional: Set up environment variables if needed
+    // environment "VAR_NAME", "value"
+
+    standardOutput = new ByteArrayOutputStream()
+    ext.output = {
+        return standardOutput.toString()
+    }
+
+    doLast {
+        println "$output()"
+    }
+}
+
+cargoBuild.dependsOn cargoCheck
+build.dependsOn cargoBuild

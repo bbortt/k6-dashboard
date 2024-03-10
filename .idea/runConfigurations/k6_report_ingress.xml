@@ -3,7 +3,7 @@
     <option name="ACTIVE_PROFILES" value="dev" />
     <option name="FRAME_DEACTIVATION_UPDATE_POLICY" value="UpdateClassesAndResources" />
     <module name="k6-dashboard.apps.k6-report-ingress.main" />
-    <option name="SPRING_BOOT_MAIN_CLASS" value="io.github.bbortt.k6.dashboard.Application" />
+    <option name="SPRING_BOOT_MAIN_CLASS" value="io.github.bbortt.k6.report.ingress.Application" />
     <extension name="coverage">
       <pattern>
         <option name="PATTERN" value="io.github.bbortt.k6.dashboard.*" />

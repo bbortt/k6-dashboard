@@ -1,8 +1,23 @@
 # K6 Dashboard
 
-## Uploading Reports
+## Prerequisites (for development)
 
-Get started by running `docker compose -f dev/docker-compose.yml up -d` from within the root of this repository.
+If you're not interested in participating and just want to see it working, skip to
+the [quickstart section](#quickstart).
+
+You'll require...
+
+- [OpenJDK 21](https://adoptium.net/temurin/releases/) for [`apps`](./apps)
+- [Rust](https://www.rust-lang.org/tools/install) for the [`cli`](./cli)
+
+### Database
+
+First, set up the PostgreSQL database contained in [`dev/docker-compose.yml`](./dev/docker-compose.yaml). Once it's up
+and running, apply all database migrations using `./gradlew :apps:k6-report-ingress:flywayMigrate`.
+
+## Quickstart
+
+Get started by running `docker compose -f dev/docker-compose.yaml up -d` from within the root of this repository.
 
 This will start a [TimescaleDB](https://www.timescale.com/), run the [contained k6 test](./src/test/k6/script.js) and
 export the resulting data into the database.
