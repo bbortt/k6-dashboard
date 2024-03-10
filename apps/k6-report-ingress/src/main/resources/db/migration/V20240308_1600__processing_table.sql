@@ -9,3 +9,7 @@ CREATE TABLE report_processing
     error_message     TEXT,
     CONSTRAINT chk_processing_status CHECK (processing_status IN (0, 1, 2))
 );
+
+ALTER TABLE samples
+    ADD COLUMN processing_id UUID,
+    ADD FOREIGN KEY (processing_id) REFERENCES report_processing (id);

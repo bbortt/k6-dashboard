@@ -6,6 +6,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.UUID;
+
 @Slf4j
 @Service
 public class ReportProcessingService {
@@ -17,26 +19,25 @@ public class ReportProcessingService {
     }
 
     @Transactional
-    public String generateProcessingId() {
+    public ReportProcessing generateProcessingId() {
         log.info("Starting new report parsing process");
 
-        var processingId = reportProcessingRepository.save(new ReportProcessing())
-                .getId();
+        var reportProcessing = reportProcessingRepository.save(new ReportProcessing());
 
-        log.debug("Processing ID: {}", processingId);
+        log.debug("Processing ID: {}", reportProcessing.getId());
 
-        return processingId.toString();
+        return reportProcessing;
     }
 
     @Transactional
-    public void completeProcessing(String processingId) {
+    public void completeProcessing(UUID processingId) {
         log.info("Completing processing ID: {}", processingId);
-        reportProcessingRepository.updateProcessingStatus(processingId, ReportProcessing.ProcessingStatus.SUCCESS);
+        reportProcessingRepository.processingSucceeded(processingId);
     }
 
     @Transactional
-    public void processingFailed(String processingId, String errorMessage) {
+    public void processingFailed(UUID processingId, String errorMessage) {
         log.info("Processing ID failed: {}", processingId);
-        reportProcessingRepository.updateProcessingStatus(processingId, ReportProcessing.ProcessingStatus.FAILED, errorMessage);
+        reportProcessingRepository.processingFailed(processingId, errorMessage);
     }
 }

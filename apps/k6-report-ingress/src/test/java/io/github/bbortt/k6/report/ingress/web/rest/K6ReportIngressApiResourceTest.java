@@ -11,14 +11,14 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.util.concurrent.CompletableFuture;
 
-import static io.github.bbortt.k6.report.ingress.web.rest.K6ReportIngressApiController.PROCESSING_ID_HEADER_NAME;
+import static io.github.bbortt.k6.report.ingress.web.rest.K6ReportIngressApiResource.PROCESSING_ID_HEADER_NAME;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.mockito.Mockito.doReturn;
 import static org.springframework.http.HttpStatus.ACCEPTED;
 
 @ExtendWith({MockitoExtension.class})
-class K6ReportIngressApiControllerTest {
+class K6ReportIngressApiResourceTest {
 
     @Mock
     private K6ReportService k6ReportServiceMock;
@@ -26,11 +26,11 @@ class K6ReportIngressApiControllerTest {
     @Mock
     private MultipartFile reportFileMock;
 
-    private K6ReportIngressApiController k6ReportIngressApiController;
+    private K6ReportIngressApiResource k6ReportIngressApiResource;
 
     @BeforeEach
     void setUp() {
-        k6ReportIngressApiController = new K6ReportIngressApiController(k6ReportServiceMock);
+        k6ReportIngressApiResource = new K6ReportIngressApiResource(k6ReportServiceMock);
     }
 
     @Test
@@ -40,12 +40,7 @@ class K6ReportIngressApiControllerTest {
         var processingFuture = new CompletableFuture<>();
         doReturn(processingFuture).when(k6ReportServiceMock).processFileAsync(reportFileMock);
 
-        CompletableFuture<ResponseEntity<Void>> responseFuture = k6ReportIngressApiController.uploadJSONReport(reportFileMock);
-
-        assertFalse(responseFuture.isDone());
-        processingFuture.complete(mockProcessingId);
-
-        ResponseEntity<Void> responseEntity = responseFuture.join();
+        ResponseEntity<Void> responseEntity = k6ReportIngressApiResource.uploadJSONReport(reportFileMock);
 
         assertThat(responseEntity)
                 .satisfies(
@@ -57,5 +52,8 @@ class K6ReportIngressApiControllerTest {
                                 .extracting(header -> header.getFirst(PROCESSING_ID_HEADER_NAME))
                                 .isEqualTo(mockProcessingId)
                 );
+
+        assertFalse(processingFuture.isDone());
+        processingFuture.complete(mockProcessingId);
     }
 }

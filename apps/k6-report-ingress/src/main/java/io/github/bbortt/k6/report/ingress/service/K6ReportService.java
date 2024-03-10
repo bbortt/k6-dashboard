@@ -2,6 +2,7 @@ package io.github.bbortt.k6.report.ingress.service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.github.bbortt.k6.report.ingress.domain.ReportProcessing;
 import io.github.bbortt.k6.report.ingress.domain.Sample;
 import io.github.bbortt.k6.report.ingress.domain.Threshold;
 import io.github.bbortt.k6.report.ingress.web.dto.MetricPoint;
@@ -12,6 +13,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.function.Supplier;
@@ -20,7 +22,6 @@ import static io.github.bbortt.k6.report.ingress.web.dto.MetricPoint.MetricPoint
 import static io.github.bbortt.k6.report.ingress.web.dto.MetricPoint.MetricPointType.Point;
 import static java.util.Objects.requireNonNull;
 import static java.util.concurrent.CompletableFuture.allOf;
-import static java.util.concurrent.CompletableFuture.completedFuture;
 import static java.util.concurrent.CompletableFuture.runAsync;
 import static java.util.concurrent.CompletableFuture.supplyAsync;
 import static java.util.concurrent.Executors.newVirtualThreadPerTaskExecutor;
@@ -42,7 +43,7 @@ public class K6ReportService {
         this.thresholdService = thresholdService;
     }
 
-    private static Sample toSample(io.github.bbortt.k6.report.ingress.web.dto.MetricPoint metricPoint) {
+    private static Sample toSample(MetricPoint metricPoint) {
         return Sample.builder()
                 .ts(metricPoint.getData().getTime())
                 .metric(metricPoint.getMetric())
@@ -51,7 +52,7 @@ public class K6ReportService {
                 .build();
     }
 
-    private static io.github.bbortt.k6.report.ingress.domain.Threshold toThreshold(io.github.bbortt.k6.report.ingress.web.dto.MetricPoint metricPoint) {
+    private static Threshold toThreshold(MetricPoint metricPoint) {
         return Threshold.builder()
                 .ts(metricPoint.getData().getTime())
                 .metric(metricPoint.getMetric())
@@ -63,22 +64,22 @@ public class K6ReportService {
                 .build();
     }
 
-    public CompletableFuture<String> processFileAsync(MultipartFile multipartFile) {
+    public UUID processFileAsync(MultipartFile multipartFile) {
         log.info("Processing Uploaded JSON report: {}", multipartFile.getName());
 
-        var processingId = reportProcessingService.generateProcessingId();
+        var reportProcessing = reportProcessingService.generateProcessingId();
 
-        runAsync(() -> parseAndPersistReportFile(multipartFile))
+        runAsync(() -> parseAndPersistReportFile(multipartFile, reportProcessing))
                 .exceptionally(e -> {
                     log.error("Asynchronous processing failed", e);
-                    reportProcessingService.processingFailed(processingId, requireNonNull(getRootCause(e)).getMessage());
+                    reportProcessingService.processingFailed(reportProcessing.getId(), requireNonNull(getRootCause(e)).getMessage());
                     return null;
-                }).thenAccept((ignored) -> reportProcessingService.completeProcessing(processingId));
+                }).thenAccept((ignored) -> reportProcessingService.completeProcessing(reportProcessing.getId()));
 
-        return completedFuture(processingId);
+        return reportProcessing.getId();
     }
 
-    private void parseAndPersistReportFile(MultipartFile reportFile) {
+    private void parseAndPersistReportFile(MultipartFile reportFile, ReportProcessing reportProcessing) {
         try (var inputStream = reportFile.getInputStream();
              var reader = new BufferedReader(new InputStreamReader(inputStream));
              var executorService = newVirtualThreadPerTaskExecutor()) {
@@ -99,6 +100,7 @@ public class K6ReportService {
                     metricPoints.stream()
                             .filter(metricPoint -> Point.equals(metricPoint.getType()))
                             .map(K6ReportService::toSample)
+                            .map(sample -> sample.withReportProcessing(reportProcessing))
                             .toList()
             );
 

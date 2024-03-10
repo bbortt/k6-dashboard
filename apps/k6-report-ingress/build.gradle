@@ -43,17 +43,30 @@ dependencies {
 
     implementation platform("org.testcontainers:testcontainers-bom:1.19.7")
 
+    testImplementation "org.awaitility:awaitility:4.2.0"
+    testImplementation "org.flywaydb:flyway-core:${flywayVersion}"
     testImplementation "org.springframework.boot:spring-boot-starter-test"
     testImplementation "org.testcontainers:junit-jupiter"
     testImplementation "org.testcontainers:postgresql"
     testImplementation "org.testcontainers:testcontainers"
+
+    testRuntimeOnly "org.flywaydb:flyway-database-postgresql:${flywayVersion}"
+}
+
+
+tasks.withType(JavaCompile).all {
+    options.compilerArgs += ["--enable-preview"]
+}
+
+tasks.withType(JavaExec) {
+    jvmArgs += "--enable-preview"
 }
 
 
 flyway {
     url = "jdbc:postgresql://localhost:5432/k6_dashboard"
     user = "k6_dashboard"
-    password = "KrPPCHdYSXz6wMct5tUK"
+    password = "KrPPCHdYSXz6wMct5tUK" // TODO: this is for development only, harden it for production.
     locations = ["filesystem:src/main/resources/db/migration"]
 }
 
@@ -73,11 +86,10 @@ task openApiGenerateBackend(type: org.openapitools.generator.gradle.plugin.tasks
     modelFilesConstrainedTo = [""]
     supportingFilesConstrainedTo = ["ApiUtil.java"]
     configOptions = [
-            interfaceOnly  : "true",
+            delegatePattern: "true",
             useOptional    : "true",
             useSpringBoot3 : "true",
             useTags        : "true",
-            responseWrapper: "CompletableFuture",
             title          : "k6-report-ingress"
     ]
     validateSpec = true

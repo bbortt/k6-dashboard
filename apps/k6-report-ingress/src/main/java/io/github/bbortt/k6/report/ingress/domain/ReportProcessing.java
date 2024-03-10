@@ -29,12 +29,14 @@ public class ReportProcessing {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
+    @Builder.Default
     @Column(name = "start_time", nullable = false, updatable = false, columnDefinition = "TIMESTAMP WITH TIME ZONE")
     private Instant startTime = now();
 
     @Column(name = "end_time",  columnDefinition = "TIMESTAMP WITH TIME ZONE")
     private Instant endTime;
 
+    @Builder.Default
     @Column(name = "processing_status")
     private ProcessingStatus processingStatus = ProcessingStatus.PROCESSING;
 

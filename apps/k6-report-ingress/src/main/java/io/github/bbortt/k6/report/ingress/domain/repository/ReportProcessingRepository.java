@@ -13,10 +13,10 @@ import java.util.UUID;
 public interface ReportProcessingRepository extends JpaRepository<ReportProcessing, UUID> {
 
     @Modifying
-    @Query("UPDATE ReportProcessing SET processingStatus = :processingStatus WHERE id = :id")
-    void updateProcessingStatus(@Param("id") String processingId, @Param("processingStatus") ReportProcessing.ProcessingStatus processingStatus);
+    @Query("UPDATE ReportProcessing SET processingStatus = ProcessingStatus.SUCCESS WHERE id = :id")
+    int processingSucceeded(@Param("id") UUID processingId);
 
     @Modifying
-    @Query("UPDATE ReportProcessing SET processingStatus = :processingStatus, errorMessage = :errorMessage WHERE id = :id")
-    void updateProcessingStatus(@Param("id") String processingId, @Param("processingStatus") ReportProcessing.ProcessingStatus processingStatus, @Param("errorMessage") String errorMessage);
+    @Query("UPDATE ReportProcessing SET processingStatus = ProcessingStatus.FAILED, errorMessage = :errorMessage WHERE id = :id")
+    int processingFailed(@Param("id") UUID processingId, @Param("errorMessage") String errorMessage);
 }
