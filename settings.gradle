@@ -2,6 +2,7 @@ pluginManagement {
     repositories {
         gradlePluginPortal()
         maven { url "https://repo.spring.io/release" }
+        maven { url 'https://repo.spring.io/milestone' }
     }
 
     plugins {
@@ -27,5 +28,3 @@ rootProject.name = "${rootProject.name}"
 
 
 include 'apps:k6-report-ingress', 'cli'
-findProject(':apps:k6-report-ingress')?.name = 'k6-report-ingress'
-findProject(':cli')?.name = 'k6-report-cli'

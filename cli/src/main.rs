@@ -1,7 +1,6 @@
 use std::path::PathBuf;
 
 use clap::{Arg, Command};
-use futures::stream::TryStreamExt;
 use futures::TryFutureExt;
 use openapi::apis::{configuration, configuration::Configuration, Error, ResponseContent};
 use openapi::apis::k6_report_ingress_api::UploadJsonReportError;

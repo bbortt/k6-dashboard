@@ -9,11 +9,10 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.util.concurrent.CompletableFuture;
+import java.util.UUID;
 
 import static io.github.bbortt.k6.report.ingress.web.rest.K6ReportIngressApiResource.PROCESSING_ID_HEADER_NAME;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.mockito.Mockito.doReturn;
 import static org.springframework.http.HttpStatus.ACCEPTED;
 
@@ -35,10 +34,9 @@ class K6ReportIngressApiResourceTest {
 
     @Test
     void uploadJSONReportRespondsDespiteBeingProcessedAsynchronously() {
-        var mockProcessingId = "mockId";
+        var mockProcessingId = UUID.fromString("20c8fc34-934e-47ee-9f33-c6325e479d58");
 
-        var processingFuture = new CompletableFuture<>();
-        doReturn(processingFuture).when(k6ReportServiceMock).processFileAsync(reportFileMock);
+        doReturn(mockProcessingId).when(k6ReportServiceMock).processFileAsync(reportFileMock);
 
         ResponseEntity<Void> responseEntity = k6ReportIngressApiResource.uploadJSONReport(reportFileMock);
 
@@ -50,10 +48,7 @@ class K6ReportIngressApiResourceTest {
                         r -> assertThat(r)
                                 .extracting(ResponseEntity::getHeaders)
                                 .extracting(header -> header.getFirst(PROCESSING_ID_HEADER_NAME))
-                                .isEqualTo(mockProcessingId)
+                                .isEqualTo(mockProcessingId.toString())
                 );
-
-        assertFalse(processingFuture.isDone());
-        processingFuture.complete(mockProcessingId);
     }
 }

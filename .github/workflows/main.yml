@@ -2,7 +2,6 @@ name: Application CI
 on:
   push:
     branches:
-      - '!main'
 concurrency:
   group: application-ci-${{ github.ref }}
   cancel-in-progress: true
@@ -26,15 +25,125 @@ jobs:
           distribution: 'temurin'
           java-version: 21
       - name: Build & Test
-        run: ./gradlew :apps:k6-report-ingress:build
+        run: ./gradlew --no-daemon :apps:k6-report-ingress:build
+      - uses: actions/upload-artifact@v4
+        with:
+          name: k6-report-ingress
+          path: apps/k6-report-ingress/build/libs/*.jar
   cli:
-    name: 'cli'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: 21
+      - name: Generate Client
+        run: ./gradlew --no-daemon :cli:openApiGenerateClient
       - name: Build
         working-directory: cli
         run: cargo build --verbose
-      - name: Run tests
+      - name: Test
         working-directory: cli
         run: cargo test --verbose
+      - uses: actions/upload-artifact@v4
+        with:
+          name: cli
+          path: cli/target/debug/cli
+  integration-test:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs:
+      - k6-report-ingress
+      - cli
+    env:
+      POSTGRES_PASSWORD: KrPPCHdYSXz6wMct5tUK
+      POSTGRES_USER: k6_dashboard
+      POSTGRES_DB: k6_dashboard
+    services:
+      timescaledb:
+        image: timescale/timescaledb:latest-pg16
+        ports:
+          - 5432:5432
+        env:
+          POSTGRES_PASSWORD: ${{ env.POSTGRES_PASSWORD }}
+          POSTGRES_USER: ${{ env.POSTGRES_USER }}
+          POSTGRES_DB: ${{ env.POSTGRES_DB }}
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          path: build/artifacts
+      - name: Create additional database
+        run: |
+          PGPASSWORD=${{ env.POSTGRES_PASSWORD }} psql -h localhost -U ${{ env.POSTGRES_USER }} -d ${{ env.POSTGRES_DB }} -c "CREATE DATABASE k6_output;"
+      - name: Run K6 Tests and Post Report
+        run: |
+          docker run --network host -e TIMESCALEDB_JDBC_URL=postgresql://${{ env.POSTGRES_USER }}:${{ env.POSTGRES_PASSWORD }}@localhost:5432/k6_output --name k6 -v ${{ github.workspace }}/src/test/k6:/scripts -v ${{ github.workspace }}/dev/k6:/mountpoint golang:alpine3.19 /mountpoint/entrypoint.sh
+          docker cp k6:/go/report.json ${{ github.workspace }}/src/test/k6/report.json
+      - name: Set up JDK 11
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+      - name: Migrate Database
+        run: ./gradlew :apps:k6-report-ingress:flywayMigrate
+      - name: Start Application and Upload JSON Report
+        timeout-minutes: 5
+        run: |
+          # Start the application in the background
+          java -jar "$(find build/artifacts -type f -name '*.jar' -not -name '*-plain.jar')" &
+          APP_PID=$!
+          
+          # Wait for the application to be ready
+          echo "Waiting for application to start..."
+          while ! nc -z localhost 8080; do   
+            sleep 1 # wait for 1 second before check again
+          done
+          
+          echo "Application started. Uploading JSON Report..."
+          
+          # Upload the JSON report
+          chmod 755 build/artifacts/cli/cli
+          build/artifacts/cli/cli upload -u http://localhost:8080 ${{ github.workspace }}/src/test/k6/report.json || exit 1
+          
+          echo "Uploading done. Waiting for processing to finish..."
+
+          # Wait until processing finished
+          count=1
+          while [ $count -ne 0 ]; do
+            sleep 5
+            echo "Processing not done yet. Retrying..."
+            output=$(docker run --rm --network host -e PGPASSWORD=${{ env.POSTGRES_PASSWORD }} postgres:16.2-alpine psql -h localhost -U ${{ env.POSTGRES_USER }} -d ${{ env.POSTGRES_DB }} -c "select count(*) from report_processing where processing_status != 1;")
+            count=$(echo "$output" | grep -Eo '[0-9]+' | head -n 1)
+          done
+
+          echo "Done."
+          
+          # Optionally, you might want to gracefully shut down your application
+          kill $APP_PID
+        env:
+          SPRING_DATASOURCE_URL: jdbc:postgresql://localhost:5432/${{ env.POSTGRES_DB }}
+          SPRING_DATASOURCE_USERNAME: ${{ env.POSTGRES_USER }}
+          SPRING_DATASOURCE_PASSWORD: ${{ env.POSTGRES_PASSWORD }}
+          SPRING_SERVLET_MULTIPART_MAX_FILE_SIZE: 1GB
+      - name: Create Database Dumps
+        run: |
+          mkdir -p build/artifacts/database
+          
+          docker run --rm --network host -e PGPASSWORD=${{ env.POSTGRES_PASSWORD }} postgres:16.2-alpine psql -h localhost -U ${{ env.POSTGRES_USER }} -d k6_output -c "COPY (SELECT date_trunc('milliseconds', ts), metric, tags, value FROM samples ORDER BY metric, ts) TO STDOUT WITH CSV HEADER;" > build/artifacts/database/k6_output.csv
+          cat build/artifacts/database/k6_output.csv | sort > build/artifacts/database/k6_output.csv
+          
+          docker run --rm --network host -e PGPASSWORD=${{ env.POSTGRES_PASSWORD }} postgres:16.2-alpine psql -h localhost -U ${{ env.POSTGRES_USER }} -d ${{ env.POSTGRES_DB }} -c "COPY (SELECT date_trunc('milliseconds', ts), metric, tags, value FROM samples ORDER BY metric, ts) TO STDOUT WITH CSV HEADER;" > build/artifacts/database/${{ env.POSTGRES_DB }}.csv
+          cat build/artifacts/database/${{ env.POSTGRES_DB }}.csv | sort > build/artifacts/database/${{ env.POSTGRES_DB }}.csv
+      - uses: actions/upload-artifact@v4
+        with:
+          name: data
+          path: build/artifacts/database/*.csv
+      - name: Compare Tables
+        run: diff build/artifacts/database/k6_output.csv build/artifacts/database/${{ env.POSTGRES_DB }}.csv
