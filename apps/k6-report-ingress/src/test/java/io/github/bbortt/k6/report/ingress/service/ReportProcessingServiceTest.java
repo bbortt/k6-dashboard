@@ -48,7 +48,7 @@ class ReportProcessingServiceTest {
         var result = reportProcessingService.generateProcessingId();
 
         assertThat(result)
-                .isEqualTo(PROCESSING_UUID);
+                .isEqualTo(reportProcessing);
     }
 
     @Test
