@@ -26,5 +26,4 @@ pluginManagement {
 
 rootProject.name = "${rootProject.name}"
 
-
-include 'apps:k6-report-ingress', 'cli'
+include 'apps:dash-board', 'apps:k6-report-ingress', 'cli'
