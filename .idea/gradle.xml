@@ -5,11 +5,12 @@
     <option name="linkedExternalProjectsSettings">
       <GradleProjectSettings>
         <option name="externalProjectPath" value="$PROJECT_DIR$" />
-        <option name="gradleHome" value="" />
+        <option name="gradleJvm" value="temurin-21" />
         <option name="modules">
           <set>
             <option value="$PROJECT_DIR$" />
             <option value="$PROJECT_DIR$/apps" />
+            <option value="$PROJECT_DIR$/apps/dash-board" />
             <option value="$PROJECT_DIR$/apps/k6-report-ingress" />
             <option value="$PROJECT_DIR$/cli" />
           </set>
