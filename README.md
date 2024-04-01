@@ -1,4 +1,10 @@
-# K6 Dashboard
+<h1 align="center">K6 Dashboard</h1>
+
+<p align="center">
+  <img src=".github/resources/banner.png" alt="K6 Banner" style="max-height: 25vh; border: 1px solid #ddd; border-radius: 1vh; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);">
+</p>
+
+## Table of Contents
 
 - [Author's Note](#authors-note)
 - [Getting Started](#getting-started)
@@ -91,7 +97,8 @@ curl -X POST -F "reportFile=@$(pwd)/src/test/k6/report.json" http://localhost:80
 If you're just looking to see the project in action, head over to [Getting Started](#getting-started). If you're
 interested in contributing, you'll need:.
 
-- [OpenJDK 21](https://adoptium.net/temurin/releases/) for the [`apps`](./apps) directory
+- [OpenJDK 21](https://adoptium.net/temurin/releases/) for some of the [`apps`](./apps)
+- Python and [poetry](https://python-poetry.org/) other [`apps`](./apps)
 - [Rust](https://www.rust-lang.org/tools/install) for the [`cli`](./cli) directory
 
 ### Database Setup
