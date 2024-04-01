@@ -12,6 +12,19 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: gradle/wrapper-validation-action@v2
+  dash-board:
+    name: 'App: dash-board'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install Poetry
+        run: curl -sSL https://install.python-poetry.org | python -
+      - name: Install Dependencies
+        working-directory: apps/dash-board
+        run: poetry install
   k6-report-ingress:
     name: 'App: k6-report-ingress'
     runs-on: ubuntu-latest
@@ -97,7 +110,7 @@ jobs:
         timeout-minutes: 5
         run: |
           # Start the application in the background
-          java -jar "$(find build/artifacts -type f -name '*.jar' -not -name '*-plain.jar')" &
+          java --enable-preview -jar "$(find build/artifacts -type f -name '*.jar' -not -name '*-plain.jar')" &
           APP_PID=$!
           
           # Wait for the application to be ready
